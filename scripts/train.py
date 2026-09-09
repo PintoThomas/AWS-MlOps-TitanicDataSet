@@ -32,7 +32,7 @@ if __name__ == "__main__":
         max_depth=args.max_depth,
         learning_rate=args.learning_rate,
         eval_metric="logloss",
-        random_state=42
+        random_state=41
     )
     model.fit(X_train, y_train)
 
