@@ -1,0 +1,68 @@
+{
+  "Comment": "Orchestrateur MLOps 100% Serverless AWS (eu-west-3)",
+  "StartAt": "ExecuteSageMakerPipeline",
+  "States": {
+    "ExecuteSageMakerPipeline": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sagemaker:startPipelineExecution",
+      "Parameters": {
+        "PipelineName": "NativeSageMakerPipeline",
+        "PipelineExecutionDescription": "Execution declenchee par Step Functions",
+        "ClientRequestToken.$": "States.UUID()"
+      },
+      "Next": "WaitForPipelineExecution"
+    },
+    "WaitForPipelineExecution": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "CheckPipelineStatus"
+    },
+    "CheckPipelineStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:sagemaker:describePipelineExecution",
+      "Parameters": {
+        "PipelineExecutionArn.$": "$.PipelineExecutionArn"
+      },
+      "Next": "EvaluatePipelineStatus"
+    },
+    "EvaluatePipelineStatus": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.PipelineExecutionStatus",
+          "StringEquals": "Succeeded",
+          "Next": "NotifySuccess"
+        },
+        {
+          "Variable": "$.PipelineExecutionStatus",
+          "StringEquals": "Failed",
+          "Next": "NotifyFailure"
+        },
+        {
+          "Variable": "$.PipelineExecutionStatus",
+          "StringEquals": "Stopped",
+          "Next": "NotifyFailure"
+        }
+      ],
+      "Default": "WaitForPipelineExecution"
+    },
+    "NotifySuccess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn.$": "$.sns_topic_arn",
+        "Message": "SUCCÈS : Le pipeline SageMaker s'est terminé avec succès sur eu-west-3. Modèle enregistré dans le Registry."
+      },
+      "End": true
+    },
+    "NotifyFailure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn.$": "$.sns_topic_arn",
+        "Message": "ÉCHEC : Une erreur est survenue lors de l'exécution du pipeline SageMaker."
+      },
+      "End": true
+    }
+  }
+}
