@@ -8,6 +8,7 @@ from sagemaker.sklearn.processing import SKLearnProcessor
 from sagemaker.processing import ProcessingInput, ProcessingOutput
 from sagemaker.inputs import TrainingInput
 from sagemaker.xgboost.estimator import XGBoost
+from sagemaker.model import Model
 
 def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     sagemaker_session = sagemaker.Session()
@@ -65,6 +66,20 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
                 content_type="text/csv"
             )
         }
+    )
+
+    # 3. Model Registry Step (Création d'un objet Model lié aux artefacts du Step précédent)
+    xgb_image_uri = sagemaker.image_uris.retrieve(
+        framework="xgboost",
+        region=region,
+        version="1.5-1"
+    )
+
+    model = Model(
+        image_uri=xgb_image_uri,
+        model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+        sagemaker_session=sagemaker_session,
+        role=role_arn
     )
 
     # 3. Model Registry Step
