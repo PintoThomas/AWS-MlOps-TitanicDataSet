@@ -1,31 +1,32 @@
 import sys
 import argparse
 import sagemaker
+from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.sklearn.processing import SKLearnProcessor
-from sagemaker.processing import ProcessingInput, ProcessingOutput
+from sagemaker.processing import ProcessingOutput
 from sagemaker.inputs import TrainingInput
 from sagemaker.xgboost.estimator import XGBoost
 from sagemaker.model import Model
 
 def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
-    sagemaker_session = sagemaker.Session()
+    # ⚠️ Utilisation explicite de PipelineSession pour différer la résolution des variables
+    pipeline_session = PipelineSession()
     
-    if not role_arn:
-        role_arn = sagemaker.get_execution_role()
     if not bucket_name:
-        bucket_name = sagemaker_session.default_bucket()
+        bucket_name = pipeline_session.default_bucket()
 
-    # 1. Processing Step (Nettoyage & Feature Engineering Titanic via Scikit-Learn)
+    # 1. Processing Step
     sklearn_processor = SKLearnProcessor(
         framework_version='1.0-1',
         role=role_arn,
         instance_type='ml.m5.xlarge',
         instance_count=1,
-        sagemaker_session=sagemaker_session
+        sagemaker_session=pipeline_session
     )
+
     step_process = ProcessingStep(
         name="PreprocessDataStep",
         processor=sklearn_processor,
@@ -36,7 +37,7 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         ]
     )
 
-    # 2. Training Step (Entraînement XGBoost)
+    # 2. Training Step
     xgb_estimator = XGBoost(
         entry_point="scripts/train.py",
         framework_version="1.5-1",
@@ -44,7 +45,7 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         instance_count=1,
         instance_type="ml.m5.xlarge",
         base_job_name="xgboost-titanic",
-        sagemaker_session=sagemaker_session,
+        sagemaker_session=pipeline_session,
         output_path=f"s3://{bucket_name}/artifacts",
         hyperparameters={
             "n_estimators": "100",
@@ -57,18 +58,18 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         name="TrainModelStep",
         estimator=xgb_estimator,
         inputs={
-            "train": sagemaker.inputs.TrainingInput(
+            "train": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs["train"].S3Output.S3Uri,
                 content_type="text/csv"
             ),
-            "test": sagemaker.inputs.TrainingInput(
+            "test": TrainingInput(
                 s3_data=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
                 content_type="text/csv"
             )
         }
     )
 
-    # 3. Model Registry Step (Création d'un objet Model lié aux artefacts du Step précédent)
+    # 3. Model Registry Step
     xgb_image_uri = sagemaker.image_uris.retrieve(
         framework="xgboost",
         region=region,
@@ -78,11 +79,10 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     model = Model(
         image_uri=xgb_image_uri,
         model_data=step_train.properties.ModelArtifacts.S3ModelArtifacts,
-        sagemaker_session=sagemaker_session,
+        sagemaker_session=pipeline_session,
         role=role_arn
     )
 
-    # 3. Model Registry Step
     step_register = ModelStep(
         name="RegisterModelStep",
         step_args=model.register(
@@ -99,21 +99,17 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     pipeline = Pipeline(
         name="NativeSageMakerPipeline",
         steps=[step_process, step_train, step_register],
-        sagemaker_session=sagemaker_session
+        sagemaker_session=pipeline_session
     )
     return pipeline
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--role-arn", type=str, required=True)
     parser.add_argument("--bucket-name", type=str, required=True)
     parser.add_argument("--region", type=str, default="eu-west-3")
     args = parser.parse_args()
 
-    from sagemaker.workflow.pipeline_context import PipelineSession
-    pipeline_session = PipelineSession()
-    
     pipeline = get_pipeline(region=args.region, role_arn=args.role_arn, bucket_name=args.bucket_name)
     pipeline.upsert(role_arn=args.role_arn)
-    print(f"Pipeline SageMaker 'NativeSageMakerPipeline' (XGBoost Titanic) mis à jour avec succès sur {args.region}.")
+    print(f"Pipeline SageMaker 'NativeSageMakerPipeline' mis à jour avec succès sur {args.region}.")
