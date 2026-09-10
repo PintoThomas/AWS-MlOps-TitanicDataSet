@@ -111,6 +111,9 @@ if __name__ == "__main__":
     parser.add_argument("--region", type=str, default="eu-west-3")
     args = parser.parse_args()
 
+    from sagemaker.workflow.pipeline_context import PipelineSession
+    pipeline_session = PipelineSession()
+    
     pipeline = get_pipeline(region=args.region, role_arn=args.role_arn, bucket_name=args.bucket_name)
     pipeline.upsert(role_arn=args.role_arn)
     print(f"Pipeline SageMaker 'NativeSageMakerPipeline' (XGBoost Titanic) mis à jour avec succès sur {args.region}.")
