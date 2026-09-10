@@ -4,7 +4,7 @@ import setuptools
 
 about = {}
 here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, "pipelines", "__version__.py")) as f:
+with open(os.path.join(here, "scripts", "__version__.py")) as f:
     exec(f.read(), about)
 
 
