@@ -42,6 +42,7 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         role=role_arn,
         instance_count=1,
         instance_type="ml.m5.xlarge",
+        base_job_name="xgboost-titanic",
         sagemaker_session=sagemaker_session,
         output_path=f"s3://{bucket_name}/artifacts",
         hyperparameters={
