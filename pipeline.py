@@ -1,12 +1,13 @@
 import sys
 import argparse
 import sagemaker
-from sagemaker.session import Session
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 from sagemaker.workflow.model_step import ModelStep
-from sagemaker.processing import ScriptProcessor, ProcessingInput, ProcessingOutput
-from sagemaker.estimator import Estimator
+from sagemaker.sklearn.processing import SKLearnProcessor
+from sagemaker.processing import ProcessingInput, ProcessingOutput
+from sagemaker.inputs import TrainingInput
+from sagemaker.xgboost.estimator import XGBoost
 
 def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     sagemaker_session = sagemaker.Session()
@@ -17,12 +18,11 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         bucket_name = sagemaker_session.default_bucket()
 
     # 1. Processing Step (Nettoyage & Feature Engineering Titanic via Scikit-Learn)
-    sklearn_processor = ScriptProcessor(
-        command=['python3'],
-        image_uri=sagemaker.image_uris.retrieve('sklearn', region, '1.2-1'),
+    sklearn_processor = SKLearnProcessor(
+        framework_version='1.0-1',
         role=role_arn,
-        instance_count=1,
         instance_type='ml.m5.xlarge',
+        instance_count=1,
         sagemaker_session=sagemaker_session
     )
     step_process = ProcessingStep(
@@ -36,12 +36,9 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     )
 
     # 2. Training Step (Entraînement XGBoost)
-    # Récupération de l'image Docker officielle XGBoost AWS pour eu-west-3
-    xgboost_image_uri = sagemaker.image_uris.retrieve('xgboost', region, '1.5-1')
-
-    xgb_estimator = Estimator(
-        image_uri=xgboost_image_uri,
+    xgb_estimator = XGBoost(
         entry_point="scripts/train.py",
+        framework_version="1.5-1",
         role=role_arn,
         instance_count=1,
         instance_type="ml.m5.xlarge",
