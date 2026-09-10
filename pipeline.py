@@ -85,7 +85,7 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     # 3. Model Registry Step
     step_register = ModelStep(
         name="RegisterModelStep",
-        step_args=xgb_estimator.register(
+        step_args=model.register(
             content_types=["text/csv"],
             response_types=["text/csv"],
             inference_instances=["ml.m5.xlarge"],
