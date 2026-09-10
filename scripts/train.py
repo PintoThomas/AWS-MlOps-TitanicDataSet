@@ -13,9 +13,9 @@ if __name__ == "__main__":
     parser.add_argument("--test-dir", type=str, default=os.environ.get("SM_CHANNEL_TEST", "/opt/ml/input/data/test"))
     
     # Hyperparamètres XGBoost
-    parser.add_argument("--n-estimators", type=int, default=100)
-    parser.add_argument("--max-depth", type=int, default=4)
-    parser.add_argument("--learning-rate", type=float, default=0.1)
+    parser.add_argument("--n_estimators", type=int, default=100)
+    parser.add_argument("--max_depth", type=int, default=4)
+    parser.add_argument("--learning_rate", type=float, default=0.1)
     
     args = parser.parse_args()
 
