@@ -32,8 +32,16 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
         processor=sklearn_processor,
         code="scripts/preprocess.py",
         outputs=[
-            ProcessingOutput(output_name="train", source="/opt/ml/processing/output/train"),
-            ProcessingOutput(output_name="test", source="/opt/ml/processing/output/test")
+            ProcessingOutput(
+                output_name="train", 
+                source="/opt/ml/processing/output/train",
+                destination=f"s3://{bucket_name}/processed/train"  # 👈 Sauvegarde explicite sur S3
+            ),
+            ProcessingOutput(
+                output_name="test", 
+                source="/opt/ml/processing/output/test",
+                destination=f"s3://{bucket_name}/processed/test"    # 👈 Sauvegarde explicite sur S3
+            )
         ]
     )
 

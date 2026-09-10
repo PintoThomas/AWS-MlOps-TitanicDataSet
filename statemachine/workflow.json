@@ -46,23 +46,11 @@
       ],
       "Default": "WaitForPipelineExecution"
     },
-    "NotifySuccess": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "TopicArn.$": "$.sns_topic_arn",
-        "Message": "SUCCÈS : Le pipeline SageMaker s'est terminé avec succès sur eu-west-3. Modèle enregistré dans le Registry."
-      },
-      "End": true
+    "Success": {
+      "Type": "Succeed"
     },
-    "NotifyFailure": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "TopicArn.$": "$.sns_topic_arn",
-        "Message": "ÉCHEC : Une erreur est survenue lors de l'exécution du pipeline SageMaker."
-      },
-      "End": true
+    "Fail": {
+      "Type": "Fail"
     }
   }
 }
