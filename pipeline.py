@@ -70,11 +70,12 @@ def get_pipeline(region="eu-west-3", role_arn=None, bucket_name=None):
     step_register = ModelStep(
         name="RegisterModelStep",
         step_args=xgb_estimator.register(
-            model_package_group_name="NativeAWSMLOpsGroup",
-            approval_status="PendingManualApproval",
             content_types=["text/csv"],
             response_types=["text/csv"],
-            inference_instances=["ml.m5.xlarge"]
+            inference_instances=["ml.m5.xlarge"],
+            transform_instances=["ml.m5.xlarge"],
+            model_package_group_name="NativeAWSMLOpsGroup",
+            approval_status="PendingManualApproval"
         )
     )
 
